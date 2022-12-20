@@ -153,7 +153,6 @@
       var result = _.contains([1, 2, 3], 2)
       console.log(result)
     ```
-
 - Package Dependencies
   - Install **mongoose@4.13.6**
   - All modules in `node_modules`, except for *underscore* and *mongoose*, are dependencies of *mongoose*
@@ -188,6 +187,8 @@
 
 - Viewing Registry Info for a Package
   - `npm view <package>` to view the `package.json` of a given package
+    - Look up all versions available: `npm view <package> versions --json`
+    - Look up all versions available and their release dates: `npm view <package> time --json`
   - If you are looking only for information on the dependencies: `npm view <package> dependencies`
   - All the versions release of a package: `npm view <package> versions`
 
@@ -228,3 +229,190 @@
     - `npm version minor`
     - `npm version patch`
   - Run `npm publish`
+
+## Building RESTful API's Using Express
+
+- Introduction 
+  - Use Express instead of *http* module
+    - Express is a fast and lightweight framework for building web applications
+
+- RESTful Services
+  - Also called RESTful APIs
+  - REST (REpresentational State Transfer)
+  - CRUD Operations
+    - Create
+    - Read
+    - Update
+    - Delete
+  - `http://vidly.com/api/costumers`
+    - `/costumers` is a resource
+  - HTTP methods
+    - GET for getting data
+    - POST for creating data
+    - PUT for updating data
+    - DELETE for deleting data
+    
+- Introducing Express
+  - Install Express v.4.16.2: `npm i express@4.16.2`
+
+- Building Your First Web Server
+
+- Nodemon
+  - Removes the need of stopping and restarting the server after every change
+  - You may want to do a global install: `npm i -g nodemon`
+  - Run your application: `nodemon index.js`
+
+- Environment Variables
+  - It is a variable part of the environment where a process runs
+  - Env. var. is PORT usually (fall back to 3000 in case PORT is not defined)
+    - `const port = process.env.PORT || 3000`
+  - Assign an arbitrary port number for your application
+    - `export PORT=5001`
+
+- Route Parameters
+  - **Route parameters** are used for essential or **required** values
+    - `/:<parameter>` is a parameter in the URL
+      - `/api/courses/:id`
+      - `/api/posts/:year/:month`
+    - In Express, <parameter> can be fetched with `req.params`
+  - **Query string parameters** are used for anything that is **optional** and are passed in the URL after a question mark
+    - In Express, query parameters are fetched with `req.query`
+    - `/api/posts/:year/:month?sortBy=name`
+
+- Handling HTTP GET Requests
+  - `let` is used for defining a variable that we can reset later
+  - `const` is used for defining a constant
+  - 404: object not found
+
+- Handling HTTP POST Requests
+  - Add `app.use(express.json());` to be able to read the request body as JSON
+  - Send back to the client the object created using the POST method
+  - Test HTTP POST using Postman
+
+- Input Validation
+  - Don't assume the client is sending a correct request
+  - JOI is a npm package that is used for request validation
+  - Install JOI: `npm i joi@13.1.0`
+  - `const Joi = require('joi');` with the capital J because we are dealing with a class
+  - ```js
+      const schema = {
+        name: Joi.string().min(3).required(),
+      };
+
+      const result = Joi.validate(req.body, schema);
+
+      if (result.error) return res.status(400).send(result.error.details[0].message);
+    ```
+
+- Handling PUT Requests
+  
+- Handling DELETE Requests
+
+## Express - Advanced Topics
+
+- Middleware
+  - A middleware, or middleware function, takes a request object and returns a response to the client or passes the control to another middleware function
+    - In Express, every route function is technically a middleware function
+- The **request processing pipeline** for the current code:
+  - `request` &rarr; `json()` (middleware 1) &rarr; `route()` (middleware 2) &rarr; `response`
+
+- Creating Custom Middleware
+  - A middleware follows the following pattern
+    - ```js
+        function(req, res, next){
+          // do something
+          next(); // don't forget this line; otherwise, app will hang
+        }
+      ```
+  - Create logic for the middleware in a separate file and export the middleware function
+  - Import the middleware to your app and install it by using the line below
+    - `app.use(<middleware>)`
+
+- Built-in Middleware
+  - `express.json()` is a built-in middleware that parses the body of a request
+  - VSCode trick: `option` + `shift` + `down arrow` duplicates a line
+  - `express.urlencoded({ extended: true })` in the body of your request (e.g. key1=value1&key2=value2)
+    - To test it, use x-www-form-urlencoded in Body tab in Postman
+    - Pass arrays and complex formats using *urlencoded*
+  - `express.static()` use for serving static files
+    - `app.use(express.static('public'));` will serve files located in the public folder of the root directory of your app
+
+- Third-party Middleware
+  - **helmet**: helps secure your apps by setting various HTTP headers
+  - **morgan**: HTTP request logger
+    - Log requests to the console, but it can be configured to log requests to a log file
+
+- Environment
+  - Enable or disable certain features according to your current environment
+    - E.g.: enabling logging of HTTP requests only in the development environment
+  - Two ways of fetching the environment
+    - `process.env.NODE_ENV`: if `NODE_ENV` not set, returns `undefined`
+    - `app.get('env')`: returns `development` by default (regardless of whether `NODE_ENV` is `undefined`)
+    - Load a middleware or not based on the current environment
+      - ```js
+          if (app.get('env') === 'development') {
+            app.use(morgan('tiny'));
+            console.log('Morgan enabled...');
+          }
+        ```
+
+- Configuration
+  - NPM modules for managing the configuration of your applications
+    - rc
+    - config
+  - Run `npm i config@1.29.2`
+  - Create a folder named `config` in the root directory of your app and have a file for each of your environments
+    - *default.json*
+    - *development.json*
+    - *production.json*
+  - When using the *config* module, your application will load the configurations based on the value you declared to your env. var. `NODE_ENV` (e.g.: development, production)
+  - Do not store your application secrets in the configuration files (instead, you should store your secrets using env. variables e.g. `export app_password=1234`)
+    - No database password
+    - No mail server database
+  - To fetch the env. variables that are storing your secrets, create a file named `custom-environment-variables.json`, map in this file the JSON properties with those env. variables (example below), and use the *config* module to access the secrets
+    - ```json
+        {
+          "mail": {
+            "password": "app_password"
+          }
+        }
+      ```
+
+- Debugging
+  - Install the debug package: `npm i debug@3.1.0`
+  - `require('debug')` returns a function
+  - Pass in a namespace for the debug function (e.g. `require('debug')('app:startup')` or `require('debug')('app:db')`
+  - Use the env. var. DEBUG to set what namespace debugging message you want to see
+    - `export DEBUG=app:db`
+    - `export DEBUG=app:startup,app:db`
+    - `export DEBUG=app:*`
+  - There is also a shortcut for setting DEBUG env. variable 
+    - `DEBUG=app:db nodemon index.js`
+
+- Template Engines
+  - Template engine modules (generate dynamic HTML and return it to the client)
+    - Pug
+    - Mustache
+    - EJS
+  - Install *pug*: `npm i pug@2.0.1`
+  - Set `view engine` property in your app
+    - `app.set('view engine', 'pug')` loads the *pug* module (no need for `require('pug')`)
+  - Set (by default) views
+    - `app.set('views', './views')` (make sure to create the folder views in the root of your project directory) 
+  - Return an HTML markup to the client
+    - `res.render('index', { title: 'My Express App', message: 'Hello});`
+    - The first argument is the name of our view
+    - The second argument is an object with all the parameters defined in the template (.pug file)
+  - When building RESTful web services for the backend, you usually don't need a view engine, or a template engine
+
+- Database Integration
+  - There are various [database drivers](https://expressjs.com/en/guide/database-integration.html) when you use Node.js and Express
+
+- Authentication
+  - Authentication is outside the scope of Express
+  - Express is minimal, light-weight framework which does not have an opinion about
+  - To be seen later in the course
+
+- Structuring Express Applications
+  - When putting the routes for a certain resource into its own, separate file, instead of using `const app = express();`, use `const <router_object_name> = express.Router();` and then export `<router_object_name>` at the end of your code. In your *index.js* file, import the router object that you just exported in the other file (e.g. `const <router_object> = require('./routes/<router_object_file>');`) and add `app.use('<path>', <router_object>)`, which tells your application to prepend `<path>` to the route when using the given `<router_object>`
+  - If there are any custom middleware functions, ensure those are under a *middleware* folder located in the root directory
