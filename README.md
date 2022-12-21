@@ -416,3 +416,164 @@
 - Structuring Express Applications
   - When putting the routes for a certain resource into its own, separate file, instead of using `const app = express();`, use `const <router_object_name> = express.Router();` and then export `<router_object_name>` at the end of your code. In your *index.js* file, import the router object that you just exported in the other file (e.g. `const <router_object> = require('./routes/<router_object_file>');`) and add `app.use('<path>', <router_object>)`, which tells your application to prepend `<path>` to the route when using the given `<router_object>`
   - If there are any custom middleware functions, ensure those are under a *middleware* folder located in the root directory
+
+## Asynchronous JavaScript
+
+- Synchronous vs Asynchronous Code
+  - Synchronous: a blocking piece of code
+  - Asynchronous: a non-blocking piece of code
+    - E.g.: `setTimeout()`
+  - Asynchronous does not mean concurrent or multithreaded
+
+- Patterns for Dealing with Asynchronous Code
+  - There are 3 patterns for dealing with asynchronous code
+    - Callbacks
+    - Promises
+    - Async/await
+
+- Callbacks
+  - ```js
+      console.log('Before');
+      getUser(1, (user) => {
+        getRepositories(user.gitHubUsername, (repositories) => {
+          console.log('Repositories: ', repositories);
+        });
+      });
+      console.log('After');
+
+      function getUser(id, callback) {
+        setTimeout(() => {
+          console.log('Reading a user from a database...');
+          callback({id: id, gitHubUsername: 'mosh'});
+        }, 2000);
+      }
+
+      function getRepositories(username, callback) {
+        setTimeout(() => {
+          console.log(`Reading the repositories for user ${username}...`);
+          let repositories = ['repo1', 'repo2', 'repo3'];
+          callback(repositories);
+        }, 2000);
+      }
+    ```
+
+- Callback Hell
+  - The implementation with callbacks, especially if they are deeply nested, can be difficult to read and understand 
+  - Also known as Christmas Tree problem
+
+- Named Functions to Rescue
+  - Replace the anonymous functions with named functions 
+  - ```js
+      console.log('Before');
+      getUser(1, findRepos);
+      console.log('After');
+
+      function getUser(id, callback) {
+        setTimeout(() => {
+          console.log('Reading a user from a database...');
+          callback({id: id, gitHubUsername: 'mosh'});
+        }, 2000);
+      }
+
+      function findRepos(user) {
+        getRepositories(user.gitHubUsername, displayRepos);
+      }
+
+      function getRepositories(username, callback) {
+        setTimeout(() => {
+          console.log(`Reading the repositories for user ${username}...`);
+          let repositories = ['repo1', 'repo2', 'repo3'];
+          callback(repositories);
+        }, 2000);
+      }
+
+      function displayRepos(repositories) {
+        console.log('Repositories: ', repositories);
+      }
+    ```
+
+- Promises
+  - A promise is an object that holds the eventual result of an asynchronous operation
+  - When an async. operation completes, a promise can either hold a value or an error
+  - Can be in three states
+    - Pending
+    - Fulfilled (or resolved)
+    - Rejected
+  - `const p = new Promise((resolve, reject) => { // Your code here });`
+    - `resolve` and `reject` are function references
+    - Pass in a `<result>` to the `resolve` function if the promise is fulfilled e.g. `resolve(1)`
+    - Pass in an `<error>` object to the `reject` function as a best practice if the promise gets rejected e.g. `reject(new Error('message'));`
+    - Consume what's been returned from the promise by using the methods `.then(<result>)` or `.catch(<error>)`
+    - The promise methods can be chained
+
+- Replicating Callbacks with Promises
+  - ```js
+      function getUser(id) {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            console.log('Reading a user from a database...');
+            resolve({id: id, gitHubUsername: 'mosh'});
+          }, 2000);
+        })
+      }
+
+      function getRepositories(username) {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            console.log(`Reading the repositories for user ${username}...`);
+            let repositories = ['repo1', 'repo2', 'repo3'];
+            resolve(repositories);
+          }, 2000);
+        })
+      }
+    ```
+
+- Consuming Promises
+  - ```js
+      console.log('Before');
+      getUser(1)
+        .then(user => getRepositories(user.gitHubUsername))
+        .then(repos => console.log('Repositories: ', repos))
+        .catch(err => console.log('Error', err.message));
+      console.log('After');
+    ```
+
+- Consuming Settled Promises
+  - ```js
+      const p = Promise.resolve({ id: 1 });
+      p.then(result => console.log(result));
+    ```
+  - ```js
+      const p = Promise.reject(new Error('reason for rejection...'));
+      p.catch(error => console.log(error));
+    ```
+
+- Running Promises in Parallel
+  - `Promise.all([p1, p2]).then().catch();`
+    - It is not concurrent or multithreaded
+    - If fulfilled, returns and array
+    - Returns only and when all the promises have been completed
+    - Returns an error if at least one promise is rejected
+  - `Promise.race([p1, p2]).then().catch();`
+    - The promise is resolved as soon as the first async. operation is completed
+
+- Async and Await
+  - Any time you are expecting a promise to be fulfilled or rejected, you can use `await`
+  - If you use `await` inside of a function, then you must use the decorator `async` in front of that function declaration
+  - Wrap your code inside a try-catch block to handle exceptions from the promises
+  - ```js
+      console.log('Before');
+      async function displayRepos() {
+        try {
+          const user = await getUser(1);
+          const repos = await getRepositories(user.gitHubUsername);
+          console.log('Repositories: ', repos);
+        }
+        catch (err) {
+          console.log('Error ', err);
+        }
+      }
+      displayRepos();
+      console.log('After');
+    ```
+
