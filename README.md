@@ -577,3 +577,144 @@
       console.log('After');
     ```
 
+## CRUD Operations Using Mongoose
+
+- Introducing MongoDB
+  - Document database, or NoSQL database
+  - There is no concept of tables, schemas, views, records, columns
+  - There is no need for designing your database (simply store your JSON objects in MongoDB)
+
+- Installing MongoDB on Mac
+  - Run:
+    - `brew install mongodb-community`
+    - `brew install mongodb-database-tools`
+    - `brew install mongosh`
+  - MongoDB directories on macOS
+      | | Intel Processor |	Apple M1 Processor |
+      |-|-|-| 
+      | Data Directory | /usr/local/var/mongodb |	/opt/homebrew/var/mongodb |
+      | Configuration file | /usr/local/etc/mongod.conf	| /opt/homebrew/etc/mongod.conf |
+      | Log directory |	/usr/local/var/log/mongodb | /opt/homebrew/var/log/mongodb |
+  - Start daemon: `mongod`
+  - Download MongoDB Compass
+  - Connect MongoDB Compass to your MongoDB localhost
+    - URI: `mongodb://localhost:27017`
+
+- Connecting to Mongo
+  - Install *mongoose* v5.0.1: `npm i mongosse@5.0.1`
+  - `mongoose.connect('mongodb://localhost/playground)` returns a promise that should be handled using `.then()` and `.catch()` 
+    - If the `playground` database does not exist, it will be created when a collection is written to it
+
+- Schemas
+  - A collection in MongoDB is like a table in a relational database
+  - A document in MongoDB is similar to a row in a relational database
+  - Schema is a *mongoose* concept to define the shape of documents
+  - List of types available when creating a schema:
+    - String
+    - Number
+    - Data
+    - Buffer (for storing binary data)
+    - Boolean
+    - ObjectID (for assigning unique identifiers)
+    - Array
+
+- Models
+  - Compile an schema into a model to create a class
+  - Use `mongoose.model(<collection>, <schema>)` to create a model
+  - Create a variable using the Pascal-case convention (to signify it is a class) to store the model
+  - Create an object using that class (model)
+    - ```js
+        const Course = mongoose.model('Course', courseSchema);
+        const course = new Course({
+          name: 'Node.js Course',
+          author: 'Mosh',
+          tags: ['node', 'backend'],
+          isPublished: true,
+        })`
+      ```
+
+
+> Because MongoDB 6.0 does not support [opcodes](https://www.mongodb.com/docs/v6.0/release-notes/6.0-compatibility/#legacy-opcodes-removed), I  installed MongoDB 5.0 &mdash; mongoose v5.0.1 is seems to be getting old
+> 
+> Instructions to switch from MongoDB 6.0 to 5.0:
+> - Terminate MongoDB Compass
+> - `brew services stop mongodb-community@6.0`
+> - `brew services start mongodb-community@5.0`
+> - Open MongoDB Compass
+  
+- Saving a Document
+  - Creating the record (object) course in the collections of your database
+    - `const result = await course.save();` (wrapped by an async function)
+
+- Querying Documents
+  - There are many methods you can use to query records
+    - `.find()`
+    - `.findById()`
+  - ```js
+      async function getCourses() {
+        const courses = await Course.find()
+          .find({ author: 'Mosh', isPublished: true }) // filter by attribute
+          .limit(10)
+          .sort({ name: 1 }) // 1 means ascendent order
+          // .sort('name') is equivalent
+          .select({ name: 1, tags: 1 }); // select attributes to show
+          // .select('name tags') is equivalent 
+        console.log(courses);
+      }
+    ```
+
+- Comparison Query Operators
+  - `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`
+  - `.find({ price: { $gte: 10, $lte: 20 } })` &rarr; 10 &leq; price &leq; 20
+  - `.find({ price: { $in: [10, 15, 20] } })` &rarr; price is 10, or 15, or 20
+
+- Logical Query Operators
+  - `or`, `end`
+  - `.find().or([ { author: 'Mosh' }, { isPublished: true } ])`
+    - Each object is a filter
+
+- Regular Expressions
+  - ```js
+     .find({ author: /^John/ }) // starts with John
+    ```
+  - ```js
+     .find({ author: /Doe$/i }) // starts with Doe (i for case insensitive)
+    ```
+  - ```js
+     .find({ author: /.*John.*/ }) // contains John
+    ```
+
+- Counting
+  - `.count()`
+
+- Pagination
+  - ```js
+      const pageNumber = 2;
+      const pageSize = 10;
+
+      // querying collection with .find()
+        .skip((pageNumber - 1) * pageSize)
+        .limit(pageSize)
+    ```
+  
+- Exercise 1, 2, 3
+  - Import a database: `mongoimport --db mongo-exercises --collection courses --drop --file exercise-data.json --jsonArray`
+
+- Uploading a Document - Query First
+  - Find a document (`findById()`), modify its properties, and save it (`save()`)
+  - You can use `set()` to update any attributes in the retrieved document
+
+- Uploading a Document - Update First
+  - Update directly (and, optionally, get the updated document)
+  - Use the `update()` method in which you pass in
+    - 1st param: query object
+    - 2nd param: object with new key-value pairs (you may want to use operators such as `$set` here)
+  - If you need the document to be returned, use `findByIdAndUpdate()`
+    - You will get the document before it is updated
+    - If you want the document post the update operation, pass `{ new: true }` as the third argument
+
+- Removing Documents
+  - Use `deleteOne()` to delete the first object that will be found by the operation according to the query parameter that is passed in
+  - Use `deleteOne()` to delete all the matches
+  - Use `findByIdAndRemove()` to retrieve the document before you delete it
+
