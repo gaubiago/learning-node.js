@@ -601,7 +601,7 @@
     - URI: `mongodb://localhost:27017`
 
 - Connecting to Mongo
-  - Install *mongoose* v5.0.1: `npm i mongosse@5.0.1`
+  - Install *mongoose* v5.0.1: `npm i mongoose@5.0.1`
   - `mongoose.connect('mongodb://localhost/playground)` returns a promise that should be handled using `.then()` and `.catch()` 
     - If the `playground` database does not exist, it will be created when a collection is written to it
 
@@ -617,6 +617,16 @@
     - Boolean
     - ObjectID (for assigning unique identifiers)
     - Array
+  - E.g.
+    ```js
+      const courseSchema = new mongoose.Schema({
+        name: String,
+        author: String,
+        tags: [String],
+        date: { type: Date, default: Date.now },
+        isPublished: Boolean,
+      });
+    ```
 
 - Models
   - Compile an schema into a model to create a class
@@ -715,6 +725,109 @@
 
 - Removing Documents
   - Use `deleteOne()` to delete the first object that will be found by the operation according to the query parameter that is passed in
-  - Use `deleteOne()` to delete all the matches
+  - Use `deleteMany()` to delete all the matches
   - Use `findByIdAndRemove()` to retrieve the document before you delete it
+
+## Mongo - Data Validation
+
+- Validation
+  - ```js
+      const courseSchema = new mongoose.Schema({
+        name: { type: String, required: true },
+        // ...
+      })
+    ```
+  - Technique for validating without attempting to write a document to the collection
+    - `await course.validate();`
+  - MongoDB does not care (this validation is only useful withing *mongoose*)
+  - You should use *joi* in addition to *mongoose* because they complement each other 
+    - *joi*: makes sure the data sent by the client to the server is valid
+    - *mongoose*: makes sure the data sent to the database is in the right shape
+
+- Built-in Validators
+  - You can set `required:` to a boolean or a function that returns a boolean
+    - `required: function() { return this.isPublished; }`
+      - Arrow function will not work properly
+      - `this` refers to the object
+  - You can also specify `minlength`, `maxlength`, and `match` for strings
+    - ```js
+        name: { 
+          type: String, 
+          required: true, 
+          minlength: 5, 
+          maxlength: 255, 
+          match: /<regex>/ 
+        }
+      ```
+  - You can specify valid strings with `enum:`
+    - ```js
+      category: { 
+        type: String, 
+        required: true, 
+        enum: ['web', 'mobile', 'network'] 
+      }
+      ```
+  - You can use `min:` and `max` for types such as Numeric and Date
+
+- Customs Validators
+  - ```js
+      tags: {
+        type: Array,
+        validate: {
+          validator: function(v) {
+            return v && v.length > 0;
+          },
+          message: 'A course must have at least one tag.'
+        }
+      }
+    ```
+  
+- Async Validators
+  - ```js
+      tags: {
+        type: Array,
+        validate: {
+          isAsync: true,
+          validator: function(v, callback) {
+            // Simulate some async work
+            setTimeout(() => {
+              const result = v && v.length > 0;
+              callback(result);
+            }, 4000);
+          },
+          message: 'A course must have at least one tag.'
+        }
+      }
+    ```
+
+- Validation Errors
+  - ```js
+      try { 
+        // something
+      }
+      catch (ex) {
+        for (field in ex.errors)
+          console.log(ex.errors[field].message);
+      }
+    ```
+
+- SchemaType Options
+  - Schema type example: `name: String,`
+  - Schema type object example: `name: { type: String, required: true },`
+  - Extra options for a string
+    - `lowercase`: output all letters in lowercase
+    - `uppercase`: output all letters in uppercase
+    - `trim`: output a string without any paddings
+  - Extra options for when defining any property, irrespective of its type
+    - `get: v => Math.round(v),`: called when you read a document
+    - `set: v => Math.round(v),`: called when you write a document
+
+- Project - Add Persistence to Genres API
+  - Change the project from a hard-coded array database to MongoDB
+
+- Project - Build the Customers API
+  - Build an API for handling a customers collection
+
+- Restructuring the Project
+  - Separating the model section from the route section so that each file (*index.js*, route files, and model files) is responsible for a specific task
 
