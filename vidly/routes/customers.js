@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const customer = await Customer.findById(req.params.id);
-    if (!customer) return res.status(404).send('The genre with the given ID was not found.');
+    if (!customer) return res.status(404).send('The customer with the given ID was not found.');
     res.send(customer);
   }
   catch (err) {
@@ -28,12 +28,12 @@ router.post('/', async (req, res) => {
   if (error) return res.status(400).send(error.details[0].message);
 
   try {
-    let customer = new Customer({ 
+    const customer = new Customer({ 
       isGold: req.body.isGold,
       name: req.body.name,
       phone: req.body.phone
     });
-    customer = await customer.save();
+    await customer.save();
     res.send(customer);
   }
   catch (err) {
@@ -51,7 +51,7 @@ router.put('/:id', async (req, res) => {
       name: req.body.name,
       phone: req.body.phone
     }, { new: true });
-    if (!customer) return res.status(404).send('The genre with the given ID was not found.');
+    if (!customer) return res.status(404).send('The customer with the given ID was not found.');
     res.send(customer);
   }
   catch (err) {
@@ -62,7 +62,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const customer = await Customer.findByIdAndRemove(req.params.id);
-    if (!customer) return res.status(404).send('The genre with the given ID was not found.');
+    if (!customer) return res.status(404).send('The customer with the given ID was not found.');
     res.send(customer);
   }
   catch (err) {

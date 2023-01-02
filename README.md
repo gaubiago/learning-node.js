@@ -601,6 +601,7 @@
     - URI: `mongodb://localhost:27017`
 
 - Connecting to Mongo
+  - [MongoDB and _mongoose_ version compatibility](https://mongoosejs.com/docs/compatibility.html)
   - Install *mongoose* v5.0.1: `npm i mongoose@5.0.1`
   - `mongoose.connect('mongodb://localhost/playground)` returns a promise that should be handled using `.then()` and `.catch()` 
     - If the `playground` database does not exist, it will be created when a collection is written to it
@@ -644,7 +645,7 @@
       ```
 
 
-> Because MongoDB 6.0 does not support [opcodes](https://www.mongodb.com/docs/v6.0/release-notes/6.0-compatibility/#legacy-opcodes-removed), I  installed MongoDB 5.0 &mdash; mongoose v5.0.1 is seems to be getting old
+> Because MongoDB 6.0 does not support [opcodes](https://www.mongodb.com/docs/v6.0/release-notes/6.0-compatibility/#legacy-opcodes-removed), I  installed MongoDB 5.0 &mdash; mongoose v5.0.1 seems to be getting old
 > 
 > Instructions to switch from MongoDB 6.0 to 5.0:
 > - Terminate MongoDB Compass
@@ -831,3 +832,126 @@
 - Restructuring the Project
   - Separating the model section from the route section so that each file (*index.js*, route files, and model files) is responsible for a specific task
 
+## Mongoose - Modeling Relationships between Connected Data
+
+- Modeling Relationships
+  - There are three approaches:
+    - Approach 1: Using References (Normalization)
+    - Approach 2: Using Embedded Documents (De-normalization )
+    - Approach 3: Hybrid Approach
+  - Trade-off between the two approaches:
+    - Consistency (Approach 1)
+    - Query Performance (Approach 2)
+  - In relational database, there is the concept of relationship, which enforces data integrity. But in NoSQL databases, we don't have data relationship. 
+
+- Referencing Documents
+  - ```js
+      author: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Author'
+      }
+    ```
+
+- Population
+  - User `.populate()` to fetch and show cross-reference objects in a query result
+  - e.g. `await Course.find().populate('author', 'name');`
+    - `author` object will be retrieve with only the property `name` and the object ID
+    - The object ID can be excluded from the result by supplying `'name -_id'` as the second parameter of `.populate()`
+    - You can chain more than one `.populate()` if there is a need to retrieve more than one cross-referenced objects
+
+- Embedding Documents
+  - ```js
+      const Course = mongoose.model('Course', new mongoose.Schema({
+        name: String,
+        author: authorSchema
+      }));
+    ```
+  - Embedded documents cannot be saved on their own &mdash; they can only be saved in the context of their parent documents
+    - ~~course.author.save();~~ (does not exist)
+    - course.save(); &rarr; OK!
+  - You can update a sub-document directly in the database
+    - ```js
+        const course = await Course.update({ _id: courseId }, {
+          $set: {
+            'author.name': 'John Smith'
+          }
+        });
+      ```
+  - You can remove a sub-document
+    - ```js
+        const course = await Course.update({ _id: courseId }, {
+          $unset: {
+            'author': '' // value must be an empty string
+          }
+        });
+      ```
+
+- Using an Array of Sub-documents
+  - ```js
+      const Course = mongoose.model('Course', new mongoose.Schema({
+        name: String,
+        author: [ authorSchema ]
+      }));
+    ```
+  - Add a course (sub-document)
+    - ```js
+        async function add Author(courseId, author) {
+          const course = await Course.findById(courseId);
+          course.authors.push(author);
+          course.save();
+        }
+      ```
+  - Removing an item from an array
+    - ```js
+        async function add Author(courseId, authorId) {
+          const course = await Course.findById(courseId);
+          const author = course.authors.id(authorId);
+          author.remove();
+          course.save();
+        }
+      ```
+
+- Project - Building Movies API
+
+- Project - Building Rentals API
+
+- Transactions
+  - A transaction is a group of operations that must be performed as a unit
+  - In MongoDB there aren't transaction as seen for relational databases (instead there is something called [__two phase commit__](https://www.mongodb.com/docs/v3.2/tutorial/perform-two-phase-commits/))
+  - Library that gives us the concept of transaction (implements two-phase commits internally)
+    - fawn (`npm i fawn@2.1.5`)
+  - The `Fawn` class creates a new collection named `ojlinttaskcollections`, which is used for storing a document per transaction when performing two-phase commits. When the transaction is over, `Fawn` deletes the correspondent document in `ojlinttaskcollections`.
+
+- ObjectID
+  - `_id`: 24 characters / 12 bytes that allows for uniquely identifying a document in MongoDB
+    - First 4 bytes: timestamp
+    - Next 3 bytes: machine identifier
+    - Next 2 bytes: process identifier
+    - Last 3 bytes: counter (extremely low changes that the counter would overflow, which would make the `_id` no longer unique)
+  - `_id` is generated by the MongoDB driver
+    - This means that the client does not need to wait for MongoDB to generate a new unique identifier
+    - This promotes scalability
+  - Create and an object ID using _mongoose_, which is an abstraction built on top of the MongoDB driver
+    ```js
+      const mongoose =  require('mongoose');
+      const id = new mongoose.Types.ObjectId();
+    ```
+    - Get the timestamp of the ID: `const timestamp = id.getTimestamp();`
+    - Validate object ID: `const isValid = mongoose.Types.ObjectId.isValid(<object>)`
+
+- Validating ObjectIDs
+  - `path` in _mongoose_ means a chain of properties 
+  - NPM packages that adds support for validating object IDs in _joi_
+    - It named _joi-objectid_: `npm i joi-objectid@2.0.0`
+  - How to import _joi-objectid_: `Joi.objectId = require('joi-objectid')(Joi);`
+  - Apply the function in the schema for proper validation of the object ID
+    - ```js
+        function validateRental(rental) {
+          const schema = {
+            customerId: Joi.objectId().required(),
+            movieId: Joi.objectId().required()
+          };
+
+          return Joi.validate(rental, schema);
+        }
+      ```
