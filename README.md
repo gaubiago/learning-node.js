@@ -955,3 +955,41 @@
           return Joi.validate(rental, schema);
         }
       ```
+- A better implementation
+
+## Authentication and Authorization
+
+- Introduction
+  - Authentication: if the user is whom them claim they are
+  - Authorization: if the user has the right permission to perform a given operation
+
+- Creating the User Model
+
+- Registering Users
+
+- Using Lodash
+  - Provides utility functions for working with various data types
+  - Install: `npm i lodash@4.17.4`
+  - Select properties within your object
+    - `_.pick(<object>, [<prop1>, <prop2>, ...]);`
+  - To define password complexity, use `joi-password-complexity` package from NPM
+
+- Hashing Passwords
+  - Install _bcrypt_: `npm i bcrypt@1.0.3`
+  - Salt: is a string of alpha-numeric characters that is appended to the hashed password
+
+- Authenticating Users
+  - Create a JS file named either _logins.js_ or _auth.js_ within the _routes_ folder
+  - When validating the user and the password, don't send a 404 (not found) because we don't want to tell the client why the authentication failed. Instead, just say it is a bad request (we don't have enough data to process it).
+    - ```js
+        // Username validation
+        let user = await User.findOne({ email: req.body.email });
+        if (!user) return res.status(400).send('Invalid email or password.');
+        // Password validation
+        const validPassword = bcrypt.compare(req.body.password, user.password);
+        if (!validPassword) return res.status(400).send('Invalid email or password.');
+      ```
+  - Validating the password:
+
+
+
